@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 VERSION="0.0.0"
 
@@ -72,7 +72,7 @@ if [[ $fle_error = 1 ]];
 DIM=3
 KEEP_ALL_IMAGES=0
 DOQSUB=0
-CORES=2
+CORES=10
 PRECISION=1
 
 XGRID_OPTS=""
@@ -89,6 +89,7 @@ MAJORITYVOTE=0
 RUNQUICK=1
 TRANSFORM_TYPE="s"
 
+export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=3
 
 function Usage {
     cat <<USAGE
@@ -723,7 +724,7 @@ if [[ $DOQSUB -eq 0 ]];
         elif [[ ${TARGET_MASK_IMAGE} == 'majorityvoting' ]];
           then
             MAJORITY_VOTING_IMAGE="${OUTPUT_PREFIX}TargetMaskImageMajorityVoting.nii.gz"
-            maskCall="${ANTSPATH}/ImageMath ${DIM} ${MAJORITY_VOTING_IMAGE} MajorityVoting 0.8 ${EXISTING_WARPED_ATLAS_LABELS[@]};"
+            maskCall="${ANTSPATH}/ImageMath ${DIM} ${MAJORITY_VOTING_IMAGE} MajorityVoting ${EXISTING_WARPED_ATLAS_LABELS[@]};"
             jlfCall="${jlfCall} -x ${OUTPUT_PREFIX}TargetMaskImageMajorityVoting_Mask.nii.gz"
 
         elif [[ -f ${TARGET_MASK_IMAGE} ]];
@@ -744,7 +745,7 @@ if [[ $DOQSUB -eq 0 ]];
       fi
 
     echo $qscript2
-    bash $qscript2
+    bash -x $qscript2
   fi
 if [[ $DOQSUB -eq 1 ]];
   then
@@ -921,7 +922,7 @@ if [[ $DOQSUB -eq 4 ]];
         elif [[ ${TARGET_MASK_IMAGE} == 'majorityvoting' ]];
           then
             MAJORITY_VOTING_IMAGE="${OUTPUT_PREFIX}TargetMaskImageMajorityVoting.nii.gz"
-            maskCall="${ANTSPATH}/ImageMath ${DIM} ${MAJORITY_VOTING_IMAGE} MajorityVoting 0.8 ${EXISTING_WARPED_ATLAS_LABELS[@]};"
+            maskCall="${ANTSPATH}/ImageMath ${DIM} ${MAJORITY_VOTING_IMAGE} MajorityVoting ${EXISTING_WARPED_ATLAS_LABELS[@]};"
             jlfCall="${jlfCall} -x ${OUTPUT_PREFIX}TargetMaskImageMajorityVoting_Mask.nii.gz"
 
         elif [[ -f ${TARGET_MASK_IMAGE} ]];
@@ -968,7 +969,7 @@ if [[ $DOQSUB -eq 2 ]];
       then
         echo "Warning:  One or more registrations failed."
       fi
-
+    geomCall=''
     maskCall=''
 
     if [[ $MAJORITYVOTE -eq 1 ]];
@@ -979,6 +980,7 @@ if [[ $DOQSUB -eq 2 ]];
         for (( i = 0; i < ${#EXISTING_WARPED_ATLAS_IMAGES[@]}; i++ ))
           do
             jlfCall="${jlfCall} -g ${EXISTING_WARPED_ATLAS_IMAGES[$i]} -l ${EXISTING_WARPED_ATLAS_LABELS[$i]}"
+            geomCall="${geomCall} fslcpgeom ${TARGET_IMAGE} ${EXISTING_WARPED_ATLAS_IMAGES[$i]}; fslcpgeom ${TARGET_IMAGE} ${EXISTING_WARPED_ATLAS_LABELS[$i]};"
           done
 
         if [[ -z "${OUTPUT_POSTERIORS_FORMAT}" ]];
@@ -1009,7 +1011,8 @@ if [[ $DOQSUB -eq 2 ]];
         elif [[ ${TARGET_MASK_IMAGE} == 'majorityvoting' ]];
           then
             MAJORITY_VOTING_IMAGE="${OUTPUT_PREFIX}TargetMaskImageMajorityVoting.nii.gz"
-            maskCall="${ANTSPATH}/ImageMath ${DIM} ${MAJORITY_VOTING_IMAGE} MajorityVoting 0.8 ${EXISTING_WARPED_ATLAS_LABELS[@]};"
+            maskCall="${ANTSPATH}/ImageMath ${DIM} ${MAJORITY_VOTING_IMAGE} MajorityVoting ${EXISTING_WARPED_ATLAS_LABELS[@]};"
+            geomCall="${geomCall} fslcpgeom ${TARGET_IMAGE} ${MAJORITY_VOTING_IMAGE}; fslcpgeom ${TARGET_IMAGE} ${OUTPUT_PREFIX}TargetMaskImageMajorityVoting_Mask.nii.gz;"
             jlfCall="${jlfCall} -x ${OUTPUT_PREFIX}TargetMaskImageMajorityVoting_Mask.nii.gz"
 
         elif [[ -f ${TARGET_MASK_IMAGE} ]];
@@ -1021,6 +1024,7 @@ if [[ $DOQSUB -eq 2 ]];
     qscript2="${OUTPUT_PREFIX}JLF.sh"
 
     echo "$maskCall" > $qscript2
+    echo "$geomCall" >> $qscript2
     echo "$jlfCall" >> $qscript2
 
     if [[ ${TARGET_MASK_IMAGE} == 'majorityvoting' ]];
@@ -1028,8 +1032,9 @@ if [[ $DOQSUB -eq 2 ]];
         combineCall="${ANTSPATH}/ImageMath ${DIM} ${OUTPUT_PREFIX}Labels.nii.gz max ${OUTPUT_PREFIX}Labels.nii.gz ${OUTPUT_PREFIX}TargetMaskImageMajorityVoting.nii.gz"
         echo "$combineCall" >> $qscript2
       fi
-
-    sh $qscript2
+    
+    export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=`nproc`
+    bash -x $qscript2
   fi
 if [[ $DOQSUB -eq 3 ]];
   then
@@ -1109,7 +1114,7 @@ if [[ $DOQSUB -eq 3 ]];
         elif [[ ${TARGET_MASK_IMAGE} == 'majorityvoting' ]];
           then
             MAJORITY_VOTING_IMAGE="${OUTPUT_PREFIX}TargetMaskImageMajorityVoting.nii.gz"
-            maskCall="${ANTSPATH}/ImageMath ${DIM} ${MAJORITY_VOTING_IMAGE} MajorityVoting 0.8 ${EXISTING_WARPED_ATLAS_LABELS[@]};"
+            maskCall="${ANTSPATH}/ImageMath ${DIM} ${MAJORITY_VOTING_IMAGE} MajorityVoting ${EXISTING_WARPED_ATLAS_LABELS[@]};"
             jlfCall="${jlfCall} -x ${OUTPUT_PREFIX}TargetMaskImageMajorityVoting_Mask.nii.gz"
 
         elif [[ -f ${TARGET_MASK_IMAGE} ]];
@@ -1212,7 +1217,7 @@ if [[ $DOQSUB -eq 5 ]];
         elif [[ ${TARGET_MASK_IMAGE} == 'majorityvoting' ]];
           then
             MAJORITY_VOTING_IMAGE="${OUTPUT_PREFIX}TargetMaskImageMajorityVoting.nii.gz"
-            maskCall="${ANTSPATH}/ImageMath ${DIM} ${MAJORITY_VOTING_IMAGE} MajorityVoting 0.8 ${EXISTING_WARPED_ATLAS_LABELS[@]};"
+            maskCall="${ANTSPATH}/ImageMath ${DIM} ${MAJORITY_VOTING_IMAGE} MajorityVoting ${EXISTING_WARPED_ATLAS_LABELS[@]};"
             jlfCall="${jlfCall} -x ${OUTPUT_PREFIX}TargetMaskImageMajorityVoting_Mask.nii.gz"
 
         elif [[ -f ${TARGET_MASK_IMAGE} ]];
