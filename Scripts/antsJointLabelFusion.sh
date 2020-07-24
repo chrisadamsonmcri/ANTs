@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 VERSION="0.0.0"
 
@@ -745,7 +745,7 @@ if [[ $DOQSUB -eq 0 ]];
       fi
 
     echo $qscript2
-    bash -x $qscript2
+    bash $qscript2
   fi
 if [[ $DOQSUB -eq 1 ]];
   then
